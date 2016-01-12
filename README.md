@@ -11,7 +11,13 @@ Starting in Episode 34, "A Shit Barge Full of Long Pigs", Merlin started ringing
 
 My goal with this project is to build a supercut of every bell ring. 
 
-![ding](http://www.theexecutivestores.com/images/manf/alpi/20255_1.jpg)
+![ding](http://www.psdgraphics.com/file/desk-bell-icon.jpg)
+
+<h1>Directory Structure</h1>
+
+RotL episodes should be downloaded and saved to the "episodes" directory in the format "rotl_0000.mp3" (where 0000 is the zero-padded episode number).
+
+Found bells will be saved to the "found_bells" directory, which the script will create. 
 
 <h1>Known Issues</h1>
 
