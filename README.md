@@ -9,7 +9,7 @@ The "Roderick on the Line" Bell Detector finds every time a bell has been rung i
 
 Starting in Episode 34, "A Shit Barge Full of Long Pigs", Merlin started ringing a desk bell when John said something particularly funny or noteworthy, as well as to indicate the end of an episode. 
 
-![*ding*](http://www.theexecutivestores.com/images/manf/alpi/20255_1.jpg)
+![ding](http://www.theexecutivestores.com/images/manf/alpi/20255_1.jpg)
 
 My goal with this project is to build a supercut of every bell ring. 
 
