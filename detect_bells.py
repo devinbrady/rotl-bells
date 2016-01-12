@@ -53,7 +53,7 @@ get rid of shell=True
 """
 
 
-class detect_bells: 
+class DetectBells: 
 
     def __init__(self):
         """Set some class variables
@@ -488,7 +488,7 @@ class detect_bells:
 
 if __name__ == "__main__":
 
-    dbells = detect_bells()
+    dbells = DetectBells()
 
     # Run detector
     training_features_scaled, training_labels = dbells.create_training_data()
