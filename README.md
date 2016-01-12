@@ -15,7 +15,7 @@ My goal with this project is to build a supercut of every bell ring.
 
 <h1>Known Issues</h1>
 
-The logisitic regression isn't working great. Many false positives are being detected, especially Merlin's singsongy laugh and both hosts' musical interjections. I plan to try other pattern detection algrorithms, and try different methods of extracting features. 
+The logistic regression isn't working great. Many false positives are being detected, especially Merlin's singsongy laugh and both hosts' musical interjections. I plan to try other pattern detection algrorithms, and try different methods of extracting features. 
 
 Also, I found that ffmpeg is far faster than librosa at reading and writing audio files (important when the corpus runs to 243 hours of audio) but I keep running into a bug where ffmpeg can't find files. 
 
