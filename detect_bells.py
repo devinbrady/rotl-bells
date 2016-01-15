@@ -1,7 +1,6 @@
 # detect bells.py
 
 from __future__ import division
-print '**** Importing modules...'
 
 import sys
 print 'which python: ' + sys.executable
@@ -287,7 +286,7 @@ class DetectBells:
         Slow, but it works. 
         """
 
-        print 'Loading: {}, offset={}, duration={}...'.format(mp3_file_path, offset, duration),
+        print 'Loading: {}, offset={:7.2f}, duration={}...'.format(mp3_file_path, offset, duration),
 
         audio_array, sr = librosa.core.load(mp3_file_path, sr=self.__sampling_rate, offset=offset, duration=duration)
 
@@ -341,7 +340,7 @@ class DetectBells:
         """When a bell is found, save the audio of that bell along with its spectrogram. 
         """
 
-        found_bell_filepath = 'found_bells/rotl_{:04d} s{:04f} p{:.4f}'.format(episode, offset, probability)
+        found_bell_filepath = 'found_bells/rotl_{:04d} s{:07.2f} p{:.4f}'.format(episode, offset, probability)
 
         self.save_wav_librosa(
             'episodes/rotl_{:04d}.mp3'.format(episode)
@@ -485,6 +484,31 @@ class DetectBells:
 
         return None
 
+    def find_bell_true_positives(self):
+        """Save audio and spectrograms of a specific part of a RotL episode to confirm bell starts and stops
+        Record exact starts and stops in the bell_true_positives.xlsx spreadsheet. 
+        """
+
+        episode = 34
+        offset = 4993
+        duration = 10
+
+        # Read audio, create spectrogram
+        y = self.read_mp3_librosa('episodes/rotl_{:04d}.mp3'.format(episode), offset=offset, duration=10)
+        S = librosa.feature.melspectrogram(y, sr=self.__sampling_rate, n_mels=self.__n_mels)
+        log_S = librosa.logamplitude(S, ref_power=np.max)
+
+        # Detect onsets - the commencement of a sound (like the ringing of a bell!)
+        onsets = librosa.onset.onset_detect(y, sr=self.__sampling_rate, hop_length=1024)
+
+        # The seconds into the episode that these onsets occur
+        onset_seconds = offset + librosa.frames_to_time(onsets)
+
+        for os in onset_seconds: 
+            self.plot_spectrogram(34, os, 0.116, output_dir='output/', output_filename='{:.3f}'.format(os), save_audio=True)
+
+        return None
+
 
 if __name__ == "__main__":
 
@@ -494,6 +518,9 @@ if __name__ == "__main__":
     training_features_scaled, training_labels = dbells.create_training_data()
     lr = dbells.logistic_regression_sklearn(training_features_scaled, training_labels)
     dbells.scan_all_episodes(lr)
+
+    # Save specific parts of an episode to find bell true positives
+    # dbells.find_bell_true_positives()
 
     # Run some basic statistics about RotL 
     # dbells.sum_show_lengths()
