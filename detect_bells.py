@@ -25,7 +25,8 @@ import numpy as np
 import pandas as pd
 
 from sklearn.linear_model import LogisticRegression
-# from sklearn.ensemble import RandomForestClassifier as RF
+from sklearn.decomposition import RandomizedPCA
+from sklearn.ensemble import RandomForestClassifier
 from sklearn import cross_validation, preprocessing
 from sklearn.metrics import accuracy_score, f1_score, auc, roc_curve
 
@@ -37,6 +38,8 @@ try random forest
 try SVM with feature extractor
 handle known bells differently than found bells
 leave out some known bells for testing model
+document more bell examples for training data
+fix graph of spectrogram for found bells
 
 done: 
 save spreadsheet of bell true positives
@@ -76,7 +79,7 @@ class DetectBells:
         """To train the model, extract samples of known bells from Ep 34. 
         """
 
-        print '**** Creating training data...'
+        print '\n**** Creating training data...'
 
         # Seconds before and after the bell to extract for training data
         seconds_around_bell = 5
@@ -101,7 +104,20 @@ class DetectBells:
 
             training_labels = np.append(training_labels, temp_labels)
 
+        print 'Training data created.'
+        print 'Number of features: {}'.format(len(training_features_scaled))
+        print 'Number of bells in features: {:.0f}'.format(sum(training_labels))
+
         return training_features_scaled, training_labels
+
+    def run_pca(self, features):
+        """Run a principal component analysis on the training data
+        """
+
+        pca = RandomizedPCA(n_components=5)
+        feautres_pca = pca.fit_transform(features)
+
+        return feautres_pca
 
     def extract_features(self, episode, offset, duration):
         """For a portion of an episode, detect all onsets and extract the spectrogram for the period after the onset. 
@@ -148,7 +164,7 @@ class DetectBells:
         """Run a logistic regression, evaluate it, return the LR object
         """
 
-        print '**** Running logistic regression...'
+        print '\n**** Running logistic regression...'
 
         # Split into train / test segments
         features_train, features_test, target_train, target_test = cross_validation.train_test_split(features, labels, test_size=0.20, random_state=0)
@@ -164,8 +180,8 @@ class DetectBells:
 
         # coefs = pd.DataFrame(zip(feature_cols, np.transpose(lr.coef_[0])), columns=['Feature', 'Coefficient'])
 
-        # print 'F1: ',
-        # print f1_score(target_test, target_predicted)
+        print 'F1: ',
+        print f1_score(target_test, target_predicted)
 
         # preds = lr.predict_proba(features_test)[:,1]
         # fpr, tpr, _ = roc_curve(target_test, preds)
@@ -174,6 +190,39 @@ class DetectBells:
         # print '{:.2f}'.format(auc(fpr,tpr))
 
         return lr
+
+    def run_classifier(self, X, y, clf_class, **kwargs):
+        """Run any sklearn classifier function using KFold
+        """
+        # Construct a kfolds object
+        kf = cross_validation.KFold(len(y), n_folds=5, shuffle=True)
+
+        # Initialize results variables
+        y_pred = y.copy()
+        y_prob = np.zeros((len(y),2))
+        
+        # Iterate through folds
+        for train_index, test_index in kf:
+            X_train, X_test = X[train_index], X[test_index]
+            y_train = y[train_index]
+
+            # Initialize a classifier with key word arguments
+            clf = clf_class(**kwargs)
+            clf.fit(X_train,y_train)
+
+            # Predict classes
+            y_pred[test_index] = clf.predict(X_test)
+            
+            # Predict probabilities
+            y_prob[test_index] = clf.predict_proba(X_test)
+        
+        if hasattr(clf, 'feature_importances_'):
+            importances = clf.feature_importances_
+        else:
+            print 'Warning: Classifier {} does not have a feature_importances_ attribute.'.format(clf_class)
+            importances = []
+        
+        return y_pred, y_prob, importances
 
 
     # ========== Scanning of episodes
@@ -439,7 +488,7 @@ class DetectBells:
         S = librosa.feature.melspectrogram(y, sr=self.__sampling_rate, n_mels=self.__n_mels)
         log_S = librosa.logamplitude(S, ref_power=np.max)
 
-        plt.figure()
+        plt.figure(figsize=(12,5))
 
         # Make sure there's an xtick every second, if the sample is longer than a second
         if librosa.core.get_duration(y) > 1:
@@ -457,11 +506,13 @@ class DetectBells:
 
         plt.colorbar(format='%+02.0f dB')
         plt.xlabel('Seconds into Episode')
-        plt.title('mel power spectrogram')
+        plt.title('Spectrogram of Roderick on the Line: Episode {}'.format(episode))
 
         if plot_onsets: 
             onsets = librosa.onset.onset_detect(y, self.__sampling_rate)
             plt.vlines(onsets[1:], 0, log_S.shape[0], color='b')
+
+        plt.tight_layout()
 
         plt.savefig(png_path)
             
@@ -516,8 +567,12 @@ if __name__ == "__main__":
 
     # Run detector
     training_features_scaled, training_labels = dbells.create_training_data()
+    # training_features_pca = dbells.run_pca(training_features_scaled)
+
     lr = dbells.logistic_regression_sklearn(training_features_scaled, training_labels)
     dbells.scan_all_episodes(lr)
+
+    # y_pred, y_prob, importances = dbells.run_classifier(training_features_scaled, training_labels, RandomForestClassifier)
 
     # Save specific parts of an episode to find bell true positives
     # dbells.find_bell_true_positives()
@@ -526,5 +581,5 @@ if __name__ == "__main__":
     # dbells.sum_show_lengths()
 
     # Just plot one spectrogram 
-    # dbells.plot_spectrogram(34, 130, 10, output_filename='output/canonical_bell_2016-01-04', open_image=True, plot_onsets=True)
+    # dbells.plot_spectrogram(34, 130, 10, output_filename='images/canonical_bell', open_image=True, plot_onsets=False)
  

@@ -13,6 +13,20 @@ My goal with this project is to build a supercut of every bell ring.
 
 ![ding](http://www.psdgraphics.com/file/desk-bell-icon.jpg)
 
+<h1>Methodology</h1>
+
+A spectrogram is a visual representation of a sound. Here's a spectrogram of the first appearance of the bell in Episode 34: 
+
+!(images/canonical_bell.png)
+
+The vertical line at 132 seconds is Merlin's hand hitting the bell and the horizontal lines to the right represent the bell's ring. Bells ring at several harmonic frequencies (for more background, I highly recommend [Wikipedia's article on bells](https://en.wikipedia.org/wiki/Bell#Tuning)). 
+
+Using the Librosa package's (onset detector)[http://bmcfee.github.io/librosa/generated/librosa.onset.onset_detect.html?highlight=onset_detection], we can split the sound up into small chunks of time after each onset. The blue lines in this spectrogram are the detected onsets: 
+
+!(images/canonical_bell_onsets.png)
+
+For inputs to my classifier, I used the spectrograms of the small chunks of time after each onset. 
+
 <h1>Directory Structure</h1>
 
 RotL episodes should be downloaded and saved to the "episodes" directory in the format "rotl_0000.mp3" (where 0000 is the zero-padded episode number).
