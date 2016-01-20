@@ -37,11 +37,12 @@ get virtualenv to work with ffmpeg - right now, ffmpeg can't find any files
 try random forest
 try SVM with feature extractor
 handle known bells differently than found bells
-leave out some known bells for testing model
 document more bell examples for training data
 fix graph of spectrogram for found bells
+do train/test on preprocessing (see "Data transformation with held out data" here: http://scikit-learn.org/stable/modules/cross_validation.html)
 
 done: 
+leave out some known bells for testing model
 save spreadsheet of bell true positives
 use librosa onset detection
 get sublime to work with virtualenv
@@ -191,37 +192,49 @@ class DetectBells:
 
         return lr
 
-    def run_classifier(self, X, y, clf_class, **kwargs):
+    def train_classifier(self, X, y, clf_class, **kwargs):
         """Run any sklearn classifier function using KFold
         """
+
         # Construct a kfolds object
-        kf = cross_validation.KFold(len(y), n_folds=5, shuffle=True)
+        kf = cross_validation.KFold(len(y), n_folds=5, shuffle=True, random_state=0)
 
         # Initialize results variables
-        y_pred = y.copy()
+        # y_pred = y.copy()
+        y_pred = np.zeros(len(y))
         y_prob = np.zeros((len(y),2))
+
+        # Initialize a classifier with key word arguments
+        clf = clf_class(**kwargs)        
         
         # Iterate through folds
         for train_index, test_index in kf:
-            X_train, X_test = X[train_index], X[test_index]
-            y_train = y[train_index]
 
-            # Initialize a classifier with key word arguments
-            clf = clf_class(**kwargs)
+            X_train = X[train_index]
+            X_test = X[test_index]
+            y_train = y[train_index]
+            y_test = y[test_index]
+
             clf.fit(X_train,y_train)
 
             # Predict classes
+            print clf.predict(X_test)
             y_pred[test_index] = clf.predict(X_test)
             
             # Predict probabilities
             y_prob[test_index] = clf.predict_proba(X_test)
+
+            print clf.score(X_test, y_test)
         
         if hasattr(clf, 'feature_importances_'):
             importances = clf.feature_importances_
         else:
             print 'Warning: Classifier {} does not have a feature_importances_ attribute.'.format(clf_class)
             importances = []
-        
+       
+        # print y
+        # print y_pred
+
         return y_pred, y_prob, importances
 
 
@@ -569,10 +582,13 @@ if __name__ == "__main__":
     training_features_scaled, training_labels = dbells.create_training_data()
     # training_features_pca = dbells.run_pca(training_features_scaled)
 
-    lr = dbells.logistic_regression_sklearn(training_features_scaled, training_labels)
-    dbells.scan_all_episodes(lr)
+    # lr = dbells.logistic_regression_sklearn(training_features_scaled, training_labels)
+    # dbells.scan_all_episodes(lr)
 
-    # y_pred, y_prob, importances = dbells.run_classifier(training_features_scaled, training_labels, RandomForestClassifier)
+    # n_estimators=10
+    y_pred, y_prob, importances = dbells.train_classifier(
+        training_features_scaled, training_labels, 
+        RandomForestClassifier, n_estimators=100, random_state=0)
 
     # Save specific parts of an episode to find bell true positives
     # dbells.find_bell_true_positives()
