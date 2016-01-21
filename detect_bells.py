@@ -155,9 +155,17 @@ class DetectBells:
 
             features = np.append(features, [feat], axis=0)
 
+            # Save the spectrogram for this onset
+            self.plot_spectrogram(episode, os, 0.1, output_dir='features/', output_filename='ep{:04d} os{}'.format(episode, os), plot_title='ep{:04d} os{}'.format(episode, os))
+
+
         # Scale the features to -1 to 1
-        min_max_scaler = preprocessing.MinMaxScaler(feature_range=(-1, 1))
-        features_scaled = min_max_scaler.fit_transform(features)
+        # min_max_scaler = preprocessing.MinMaxScaler(feature_range=(-1, 1))
+        # features_scaled = min_max_scaler.fit_transform(features)
+
+        standard_scaler = preprocessing.StandardScaler()
+        features_scaled = standard_scaler.fit_transform(features)
+
 
         return features_scaled, onset_seconds
 
@@ -211,20 +219,22 @@ class DetectBells:
         for train_index, test_index in kf:
 
             X_train = X[train_index]
-            X_test = X[test_index]
             y_train = y[train_index]
+            X_test = X[test_index]
             y_test = y[test_index]
 
-            clf.fit(X_train,y_train)
+            clf.fit(X_train, y_train)
 
             # Predict classes
-            print clf.predict(X_test)
             y_pred[test_index] = clf.predict(X_test)
+            print 'predicted bells: {:.0f}'.format(y_pred[test_index].sum())
             
             # Predict probabilities
             y_prob[test_index] = clf.predict_proba(X_test)
+            temp = clf.predict_proba(X_test)
+            print temp[y_test == 1]
 
-            print clf.score(X_test, y_test)
+            # print clf.score(X_test, y_test)
         
         if hasattr(clf, 'feature_importances_'):
             importances = clf.feature_importances_
@@ -486,7 +496,7 @@ class DetectBells:
     # ======== Plotting functions
 
     def plot_spectrogram(self, episode, offset, duration
-        , output_dir='', output_filename='spectrogram'
+        , output_dir='', output_filename='spectrogram', plot_title=None
         , open_image=False, plot_onsets=False, save_audio=False, save_csv=False):
         
         """Create a PNG of a spectrogram and also save the audio/CSV. 
@@ -501,7 +511,10 @@ class DetectBells:
         S = librosa.feature.melspectrogram(y, sr=self.__sampling_rate, n_mels=self.__n_mels)
         log_S = librosa.logamplitude(S, ref_power=np.max)
 
-        plt.figure(figsize=(12,5))
+        if librosa.core.get_duration(y) > 1:
+            plt.figure(figsize=(12,5))
+        else: 
+            plt.figure(figsize=(5,5))
 
         # Make sure there's an xtick every second, if the sample is longer than a second
         if librosa.core.get_duration(y) > 1:
@@ -519,7 +532,11 @@ class DetectBells:
 
         plt.colorbar(format='%+02.0f dB')
         plt.xlabel('Seconds into Episode')
-        plt.title('Spectrogram of Roderick on the Line: Episode {}'.format(episode))
+
+        if plot_title == None: 
+            plot_title = 'Spectrogram of Roderick on the Line: Episode {}'.format(episode)
+
+        plt.title(plot_title)
 
         if plot_onsets: 
             onsets = librosa.onset.onset_detect(y, self.__sampling_rate)
@@ -588,7 +605,7 @@ if __name__ == "__main__":
     # n_estimators=10
     y_pred, y_prob, importances = dbells.train_classifier(
         training_features_scaled, training_labels, 
-        RandomForestClassifier, n_estimators=100, random_state=0)
+        RandomForestClassifier, n_estimators=100)
 
     # Save specific parts of an episode to find bell true positives
     # dbells.find_bell_true_positives()
